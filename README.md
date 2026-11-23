@@ -191,7 +191,46 @@ flowchart LR
 
 ---
 
-## 7. Escopo de Integração para a Equipe QwenWork.ai
+## 7. Contratos de API & Integrações de Nuvem (Google Cloud & Oracle OCI)
+
+Para que o time do **QwenWork.ai** integre o front-end sem dúvidas, aqui estão os papéis de cada API:
+
+### 7.1. APIs do Ecossistema Google Cloud & Firebase
+* **`Firebase Auth SDK` (Google):**
+  * Gerencia login com Google, e-mail/senha e tokens JWT de autenticação (`Bearer idToken`).
+* **`Google Cloud Storage REST API`:**
+  * Endpoint de upload direto com URLs assinadas (*Signed URLs*):
+    `PUT https://storage.googleapis.com/acervo-fotos/{eventoId}/{fotoId}.webp`
+* **`Firebase Realtime Database / Cloud Firestore` (WebSockets):**
+  * Canal de escuta em tempo real para o telão e galeria:
+    `onChildAdded('/eventos/{slug}/fotos_recentes')` $\rightarrow$ Entrega instantânea na tela da foto que acabou de subir.
+
+### 7.2. APIs do Backend na Oracle Cloud Infrastructure (OCI - VM Compute)
+Executadas pelo serviço FastAPI/NodeJS rodando na instância OCI:
+
+* **1. Reconhecimento Facial por Selfie:**
+  * **Rota:** `POST https://api.seudominio.com/v1/faces/search`
+  * **Payload:** `multipart/form-data` com o arquivo `selfie.jpg`.
+  * **Processamento OCI:** A VM extrai o vetor de 512 dimensões via *InsightFace* e consulta a tabela `pgvector` no PostgreSQL:
+    ```sql
+    SELECT foto_id, 1 - (embedding <=> '[0.12, -0.05, ...]') AS similaridade 
+    FROM face_embeddings 
+    WHERE similaridade > 0.68 
+    ORDER BY similaridade DESC LIMIT 50;
+    ```
+  * **Resposta:** Lista de IDs das fotos onde a pessoa aparece.
+
+* **2. Busca Textual & Facetada no Acervo:**
+  * **Rota:** `GET https://api.seudominio.com/v1/acervo/search?q=rotary&ano=2024&entidade=rotary`
+  * **Processamento OCI:** Full-Text Search no banco PostgreSQL com paginação.
+
+* **3. Registro em Ledger (Blockchain-Style) & Download Forense:**
+  * **Rota:** `POST https://api.seudominio.com/v1/media/{fotoId}/download`
+  * **Processamento OCI:** Grava o hash $SHA-256$ encadeado da transação e carimba esteganografia invisível antes de liberar o download.
+
+---
+
+## 8. Escopo de Integração para a Equipe QwenWork.ai
 
 Com a infraestrutura de dados e IA pronta, a integração com o QwenWork.ai concentra-se nas seguintes frentes:
 
