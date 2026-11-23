@@ -1,0 +1,42 @@
+Olá, equipe QwenWork.ai!
+
+Gostaria de apresentar as diretrizes, a especificação técnica e a arquitetura do nosso novo produto: um **Banco de Imagens, Acervo Histórico Municipal e Galeria Inteligente com Transmissão Ao Vivo para Telão**.
+
+Toda a nossa infraestrutura de backend, inteligência artificial, dados e pipeline de deploy já está **em pleno funcionamento**, operando em arquitetura híbrida de alta performance:
+
+1. **Google Cloud Platform & Firebase:**
+   - Autenticação e controle de acesso de usuários.
+   - Cloud Functions (eventos em tempo real e geração de miniaturas).
+   - Cloud Storage para armazenamento em massa de fotos em alta resolução.
+   - WebSocket / Firebase Realtime para transmissão ao vivo de fotos sem refresh.
+
+2. **Oracle Cloud Infrastructure (OCI):**
+   - VM Compute dedicada rodando os modelos de Reconhecimento Facial (InsightFace / ArcFace).
+   - Banco de Dados Relacional & Vetorial (PostgreSQL + pgvector) para busca de faces por selfie e busca textual (Full-Text Search).
+   - Motor de Esteganografia Forense (Watermark invisível nos pixels da foto no download).
+
+3. **Auditoria Criptográfica Imutável (Blockchain-Style):**
+   - Registro em cadeia de hash imutável (SHA-256) de quem pesquisou, visualizou, compartilhou ou baixou fotos, garantindo prova de autoria e controle de vazamentos.
+
+4. **Agente de IA "CineDirector" & Modo Telão Cinematográfico (Live Screenshow):**
+   - Módulo ao vivo para projeção em telão de eventos em tela cheia (F11), atualizado em tempo real conforme as fotos são enviadas pelo fotógrafo.
+   - Um agente de IA que comanda as transições de forma dinâmica e orgânica (Ken Burns orientado a rostos para retratos, panorâmicas com tempo estendido para fotos coletivas e disparos de flash fotográfico), intercalando tempos variáveis (3s a 7s).
+   - QR Code dinâmico no cantinho da projeção para que os convidados tirem uma selfie e encontrem suas fotos na hora, durante a própria festa.
+
+5. **Acervo Completo & Busca Facetada por Entidades:**
+   - Educação (Creches, Escolas, Faculdades).
+   - Fé & Tradições (Igreja Católica, Igrejas Evangélicas, Centros Espíritas e Matrizes Afro-Brasileiras).
+   - Clubes de Serviço & Sociedade (Rotary, Lions, Maçonaria).
+   - Poder Público & Cidadania (Prefeitura, Câmara de Vereadores) e Comércio Local.
+
+6. **Google Antigravity:**
+   - Ambiente de desenvolvimento, governança de agentes, testes automatizados e deploy contínuo (CI/CD).
+
+---
+
+### Nosso Escopo com o QwenWork.ai:
+Já disponibilizamos a especificação técnica formal e uma Prova de Conceito (POC) funcional dos layouts para alinhamento da interface:
+- **Especificação Técnica Completa:** Arquivo anexo `especificacao_tecnica_qwenwork.md` (com diagramas de arquitetura e contratos de API).
+- **Protótipo Funcional:** Galeria com busca facetada (`index.html`) e Projeção Ao Vivo com CineDirector AI (`telao.html`).
+
+Ficamos no aguardo para alinharmos os próximos passos e o cronograma de implementação do front-end integrado às nossas APIs!

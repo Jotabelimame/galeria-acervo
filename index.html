@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Acervo & Galeria Inteligente</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+  <!-- Topbar -->
+  <header class="border-b border-slate-800 bg-slate-900/80 backdrop-blur sticky top-0 z-50 px-6 py-4 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <span class="text-2xl">📸</span>
+      <div>
+        <h1 class="font-bold text-lg leading-tight">Acervo & Galeria Inteligente</h1>
+        <p class="text-xs text-slate-400">GCP + Oracle OCI + Blockchain Audit</p>
+      </div>
+    </div>
+    <div class="flex gap-2">
+      <button onclick="abrirModalSelfie()" class="bg-indigo-600 hover:bg-indigo-500 text-sm px-4 py-2 rounded-lg font-medium flex items-center gap-2">
+        <span>🤳</span> Achar Minhas Fotos (Selfie)
+      </button>
+      <a href="telao.html" target="_blank" class="bg-amber-600 hover:bg-amber-500 text-sm px-4 py-2 rounded-lg font-medium flex items-center gap-2">
+        <span>📺</span> Assistir na TV / Telão
+      </a>
+    </div>
+  </header>
+
+  <div class="max-w-7xl mx-auto px-6 py-8 grid grid-cols-1 md:grid-cols-4 gap-8">
+    <!-- Sidebar de Filtros / Entidades -->
+    <aside class="space-y-6">
+      <div>
+        <label class="text-xs font-semibold uppercase text-slate-400 tracking-wider">Busca no Acervo</label>
+        <input id="campoBusca" type="text" placeholder="Nome, evento, local..." 
+          class="w-full mt-2 bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500">
+      </div>
+
+      <!-- Filtro de Entidades / Instituições -->
+      <div>
+        <label class="text-xs font-semibold uppercase text-slate-400 tracking-wider">Entidades & Comunidade</label>
+        <select id="filtroEntidade" class="w-full mt-2 bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500">
+          <option value="">Todas as Entidades</option>
+          <optgroup label="Educação">
+            <option value="creche">Creches & Educação Infantil</option>
+            <option value="escola">Escolas (Municipais / Estaduais / Particulares)</option>
+            <option value="faculdade">Faculdades / Universidades / Técnicos</option>
+          </optgroup>
+          <optgroup label="Fé & Tradições">
+            <option value="catolica">Igreja Católica (Paróquias / Padroeiros)</option>
+            <option value="evangelica">Igrejas Evangélicas</option>
+            <option value="espirita">Centros Espíritas</option>
+            <option value="afro">Matrizes Afro-Brasileiras</option>
+          </optgroup>
+          <optgroup label="Clubes de Serviço & Sociedade">
+            <option value="rotary">Rotary Club</option>
+            <option value="lions">Lions Club</option>
+            <option value="maconaria">Maçonaria</option>
+          </optgroup>
+          <optgroup label="Poder Público & Negócios">
+            <option value="prefeitura">Prefeitura & Secretarias</option>
+            <option value="camara">Câmara de Vereadores</option>
+            <option value="comercio">Comércio Local / Associações</option>
+          </optgroup>
+        </select>
+      </div>
+
+      <!-- Filtro Ano / Época -->
+      <div>
+        <label class="text-xs font-semibold uppercase text-slate-400 tracking-wider">Ano do Evento</label>
+        <div class="flex gap-2 mt-2">
+          <button class="bg-slate-900 hover:bg-slate-800 border border-slate-800 px-3 py-1 rounded text-xs">2026</button>
+          <button class="bg-slate-900 hover:bg-slate-800 border border-slate-800 px-3 py-1 rounded text-xs">2025</button>
+          <button class="bg-slate-900 hover:bg-slate-800 border border-slate-800 px-3 py-1 rounded text-xs">2024</button>
+          <button class="bg-slate-900 hover:bg-slate-800 border border-slate-800 px-3 py-1 rounded text-xs">Histórico</button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Grid de Fotos do Acervo -->
+    <main class="md:col-span-3">
+      <div class="flex items-center justify-between mb-4">
+        <h2 id="tituloGaleria" class="font-semibold text-slate-200">Fotos em Destaque</h2>
+        <span id="contadorFotos" class="text-xs text-slate-400">Carregando...</span>
+      </div>
+
+      <div id="gridFotos" class="grid grid-cols-2 sm:grid-cols-3 gap-4">
+        <!-- Injetado dinamicamente via app.js -->
+      </div>
+    </main>
+  </div>
+
+  <!-- Modal Selfie / Reconhecimento Facial -->
+  <div id="modalSelfie" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-xl max-w-md w-full p-6 text-center space-y-4">
+      <h3 class="text-lg font-bold">🤳 Encontrar Minhas Fotos</h3>
+      <p class="text-xs text-slate-400">Tire uma selfie ou envie uma foto do seu rosto para a IA buscar você no acervo.</p>
+      
+      <div class="border-2 border-dashed border-slate-700 rounded-lg p-6 bg-slate-950 flex flex-col items-center justify-center gap-2">
+        <span class="text-3xl">📷</span>
+        <input type="file" id="inputSelfie" accept="image/*" class="text-xs text-slate-400 file:mr-2 file:py-1 file:px-3 file:rounded file:border-0 file:bg-indigo-600 file:text-white file:text-xs hover:file:bg-indigo-500">
+      </div>
+
+      <div class="flex gap-2 justify-end">
+        <button onclick="fecharModalSelfie()" class="px-4 py-2 text-xs bg-slate-800 hover:bg-slate-700 rounded-lg">Cancelar</button>
+        <button onclick="processarSelfie()" class="px-4 py-2 text-xs bg-indigo-600 hover:bg-indigo-500 rounded-lg font-medium">Buscar no Banco OCI</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Telão Ao Vivo - Modo Cinematográfico</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* Transições CineDirector AI */
+    .kenburns-zoom {
+      animation: kbZoom 6s ease-in-out infinite alternate;
+    }
+    .kenburns-pan-left {
+      animation: kbPanLeft 7s ease-in-out infinite alternate;
+    }
+    .kenburns-pan-right {
+      animation: kbPanRight 7s ease-in-out infinite alternate;
+    }
+    .flash-effect {
+      animation: photoFlash 0.6s ease-out;
+    }
+
+    @keyframes kbZoom {
+      0% { transform: scale(1); }
+      100% { transform: scale(1.15); }
+    }
+    @keyframes kbPanLeft {
+      0% { transform: scale(1.1) translateX(3%); }
+      100% { transform: scale(1.1) translateX(-3%); }
+    }
+    @keyframes kbPanRight {
+      0% { transform: scale(1.1) translateX(-3%); }
+      100% { transform: scale(1.1) translateX(3%); }
+    }
+    @keyframes photoFlash {
+      0% { opacity: 0; filter: brightness(3); }
+      40% { opacity: 1; filter: brightness(2); }
+      100% { filter: brightness(1); }
+    }
+  </style>
+</head>
+<body class="bg-black text-white h-screen w-screen overflow-hidden relative select-none">
+  <!-- Imagem do Telão -->
+  <div id="containerMidia" class="w-full h-full relative overflow-hidden flex items-center justify-center">
+    <img id="imgTelao" src="" alt="Projeção Ao Vivo" class="w-full h-full object-cover transition-opacity duration-1000 ease-in-out opacity-0">
+  </div>
+
+  <!-- Selo "Ao Vivo / Agora há pouco" -->
+  <div id="badgeStatus" class="absolute top-6 left-6 bg-red-600/90 text-white text-xs px-3 py-1.5 rounded-full font-bold uppercase tracking-wider flex items-center gap-2 shadow-lg backdrop-blur">
+    <span class="w-2 h-2 rounded-full bg-white animate-ping"></span>
+    AO VIVO NO EVENTO
+  </div>
+
+  <!-- Identificador da IA CineDirector -->
+  <div class="absolute bottom-6 left-6 text-xs text-white/50 bg-black/40 px-3 py-1 rounded backdrop-blur">
+    🤖 CineDirector AI: <span id="modoTransicaoTexto" class="text-white/80">Calculando cena...</span>
+  </div>
+
+  <!-- QR Code Dinâmico no Canto Inferior Direito -->
+  <div class="absolute bottom-6 right-6 bg-white/90 text-slate-900 p-3 rounded-xl shadow-2xl flex items-center gap-3 backdrop-blur max-w-xs">
+    <div class="w-14 h-14 bg-slate-900 rounded-lg flex items-center justify-center text-white text-xl font-bold">
+      QR
+    </div>
+    <div class="text-left">
+      <p class="text-xs font-bold leading-tight">Quer suas fotos?</p>
+      <p class="text-[10px] text-slate-600 leading-tight mt-0.5">Aponte a câmera e ache seu rosto na hora!</p>
+    </div>
+  </div>
+
+  <script src="telao.js"></script>
+</body>
+</html>
