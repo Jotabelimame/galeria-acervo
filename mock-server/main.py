@@ -1,7 +1,8 @@
-from fastapi import FastAPI, Query, UploadFile, File
+from fastapi import FastAPI, Query, UploadFile, File, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Optional
-import time
+import asyncio
+from datetime import datetime, timezone
 
 app = FastAPI(title="OCI Backend Mock - Acervo & Galeria")
 
@@ -71,33 +72,76 @@ def get_ledger(foto_id: str):
         }
     }
 
+def _build_live_frames(slug: str) -> list[dict]:
+    """Constrói os frames mock no contrato canônico do CineDirector para HTTP e WebSocket."""
+    now_iso = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    return [
+        {
+            "event_id": slug,
+            "foto_id": "fot_live_001",
+            "url_display": "https://images.unsplash.com/photo-1511795409834-ef04bbd61622?w=1600",
+            "created_at": now_iso,
+            "is_breaking": True,
+            "faces_n": 6,
+            "primary_face_bbox": {"x": 0.5, "y": 0.35, "w": 0.15, "h": 0.20},
+            "suggested_motion": "pan_horizontal",
+            "orientation": "landscape",
+            "dwell_time_ms": 7000,
+        },
+        {
+            "event_id": slug,
+            "foto_id": "fot_live_002",
+            "url_display": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=1600",
+            "created_at": now_iso,
+            "is_breaking": False,
+            "faces_n": 1,
+            "primary_face_bbox": {"x": 0.45, "y": 0.25, "w": 0.20, "h": 0.25},
+            "suggested_motion": "kenburns_focus_face",
+            "orientation": "portrait",
+            "dwell_time_ms": 4500,
+        },
+        {
+            "event_id": slug,
+            "foto_id": "fot_live_003",
+            "url_display": "https://images.unsplash.com/photo-1519741497674-611481863552?w=1600",
+            "created_at": now_iso,
+            "is_breaking": True,
+            "faces_n": 2,
+            "primary_face_bbox": {"x": 0.48, "y": 0.30, "w": 0.18, "h": 0.22},
+            "suggested_motion": "kenburns_focus_face",
+            "orientation": "portrait",
+            "dwell_time_ms": 5500,
+        },
+    ]
+
+
 # 5. Canal Live Feed Telão (Simulação de Eventos em Tempo Real para o CineDirector)
 @app.get("/api/v1/events/{slug}/live_feed")
 def get_live_feed(slug: str):
     return {
         "event_id": slug,
-        "frames": [
-            {
-                "foto_id": "fot_live_001",
-                "url_display": "https://images.unsplash.com/photo-1511795409834-ef04bbd61622?w=1600",
-                "created_at": "2026-11-23T13:40:00Z",
-                "is_breaking": True,
-                "faces_n": 6,
-                "primary_face_bbox": {"x": 0.5, "y": 0.35, "w": 0.15, "h": 0.20},
-                "suggested_motion": "pan_horizontal",
-                "orientation": "landscape",
-                "dwell_time_ms": 7000
-            },
-            {
-                "foto_id": "fot_live_002",
-                "url_display": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=1600",
-                "created_at": "2026-11-23T13:41:00Z",
-                "is_breaking": False,
-                "faces_n": 1,
-                "primary_face_bbox": {"x": 0.45, "y": 0.25, "w": 0.20, "h": 0.25},
-                "suggested_motion": "kenburns_focus_face",
-                "orientation": "portrait",
-                "dwell_time_ms": 4500
-            }
-        ]
+        "frames": _build_live_frames(slug),
     }
+
+
+@app.websocket("/api/v1/events/{slug}/live_feed")
+async def ws_live_feed(
+    websocket: WebSocket,
+    slug: str,
+    interval: float = Query(default=5.0, ge=0.1, le=60.0),
+):
+    """Emite frames ao vivo em loop no contrato CineDirector para consumo via WebSocket."""
+    await websocket.accept()
+    idx = 0
+    try:
+        while True:
+            frames = _build_live_frames(slug)
+            frame = dict(frames[idx % len(frames)])
+            cycle = idx // len(frames)
+            if cycle > 0:
+                frame["foto_id"] = f"{frame['foto_id']}_r{cycle}"
+            await websocket.send_json(frame)
+            idx += 1
+            await asyncio.sleep(interval)
+    except WebSocketDisconnect:
+        return

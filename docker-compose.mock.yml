@@ -11,7 +11,7 @@ services:
       - ./mock-server:/app
     working_dir: /app
     command: >
-      sh -c "pip install fastapi uvicorn &&
+      sh -c "pip install fastapi 'uvicorn[standard]' python-multipart websockets &&
              uvicorn main:app --host 0.0.0.0 --port 8000 --reload"
     environment:
       - PORT=8000
