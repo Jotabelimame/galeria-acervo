@@ -70,3 +70,34 @@ def get_ledger(foto_id: str):
             "signer": "oci_authority_key"
         }
     }
+
+# 5. Canal Live Feed Telão (Simulação de Eventos em Tempo Real para o CineDirector)
+@app.get("/api/v1/events/{slug}/live_feed")
+def get_live_feed(slug: str):
+    return {
+        "event_id": slug,
+        "frames": [
+            {
+                "foto_id": "fot_live_001",
+                "url_display": "https://images.unsplash.com/photo-1511795409834-ef04bbd61622?w=1600",
+                "created_at": "2026-11-23T13:40:00Z",
+                "is_breaking": True,
+                "faces_n": 6,
+                "primary_face_bbox": {"x": 0.5, "y": 0.35, "w": 0.15, "h": 0.20},
+                "suggested_motion": "pan_horizontal",
+                "orientation": "landscape",
+                "dwell_time_ms": 7000
+            },
+            {
+                "foto_id": "fot_live_002",
+                "url_display": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=1600",
+                "created_at": "2026-11-23T13:41:00Z",
+                "is_breaking": False,
+                "faces_n": 1,
+                "primary_face_bbox": {"x": 0.45, "y": 0.25, "w": 0.20, "h": 0.25},
+                "suggested_motion": "kenburns_focus_face",
+                "orientation": "portrait",
+                "dwell_time_ms": 4500
+            }
+        ]
+    }
