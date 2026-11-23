@@ -1,0 +1,34 @@
+version: '3.8'
+
+services:
+  # Mock do Backend OCI (FastAPI com endpoints canônicos /api/v1/...)
+  oci-backend-mock:
+    image: python:3.11-slim
+    container_name: oci_backend_mock
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./mock-server:/app
+    working_dir: /app
+    command: >
+      sh -c "pip install fastapi uvicorn &&
+             uvicorn main:app --host 0.0.0.0 --port 8000 --reload"
+    environment:
+      - PORT=8000
+      - STAGING_MODE=true
+
+  # Banco PostgreSQL com extensão pgvector simulada para testes locais
+  postgres-pgvector:
+    image: pgvector/pgvector:pg16
+    container_name: postgres_pgvector_mock
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=acervo_db
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:
