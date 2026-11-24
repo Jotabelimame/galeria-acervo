@@ -1,5 +1,6 @@
-from fastapi import FastAPI, HTTPException, Query, UploadFile, File, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, Header, HTTPException, Query, UploadFile, File, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from typing import Literal, Optional
 import asyncio
@@ -23,10 +24,15 @@ class VisibilidadeUpdate(BaseModel):
 
     visibilidade: Visibilidade
     confirmar_lgpd: bool = False
+    confirm_publica: bool = False
 
 
 ENTIDADES = {
     "prefeitura": {
+        "entity": "prefeitura",
+        "entity_name": "Prefeitura Municipal",
+        "description": "Portal oficial de atos solenes, posses e eventos do Executivo e Câmara Municipal.",
+        "address": "Praça Dr. Waldemar D'Ambrósio, Centro — Taquaritinga/SP",
         "slug": "prefeitura",
         "nome": "Prefeitura Municipal",
         "categoria": "poder_publico",
@@ -35,6 +41,10 @@ ENTIDADES = {
         "lgpd_protegido": False,
     },
     "paroquia": {
+        "entity": "paroquia",
+        "entity_name": "Paróquia Matriz (Festa do Padroeiro)",
+        "description": "Cobertura histórica de festas paroquiais, procissões e quermesses comunitárias.",
+        "address": "Praça São Sebastião, Centro — Taquaritinga/SP",
         "slug": "paroquia",
         "nome": "Paróquia Matriz (Festa do Padroeiro)",
         "categoria": "religiao",
@@ -43,6 +53,10 @@ ENTIDADES = {
         "lgpd_protegido": False,
     },
     "rotary": {
+        "entity": "rotary",
+        "entity_name": "Rotary Club",
+        "description": "Acervo de sessões solenes, posses de diretoria e ações sociais do Rotary.",
+        "address": "Av. Washington Luiz, 420 — Taquaritinga/SP",
         "slug": "rotary",
         "nome": "Rotary Club",
         "categoria": "civico",
@@ -51,6 +65,10 @@ ENTIDADES = {
         "lgpd_protegido": False,
     },
     "creche": {
+        "entity": "creche",
+        "entity_name": "Creches & Educação Infantil",
+        "description": "Registros escolares protegidos sob controle estrito LGPD para famílias autorizadas.",
+        "address": "Rede Municipal de Ensino Infantil — Taquaritinga/SP",
         "slug": "creche",
         "nome": "Creches & Educação Infantil",
         "categoria": "educacao_protegida",
@@ -181,6 +199,39 @@ ACERVO_FOTOS = [
 ]
 
 
+def _resolve_access_level(
+    authorization: Optional[str],
+    x_member_token: Optional[str],
+    incluir_restritas: bool,
+) -> Literal["public", "member", "admin"]:
+    """Resolve o nível de acesso do chamador pelos headers de token ou flag mock."""
+    raw_token = (authorization or "").strip()
+    if raw_token.lower().startswith("bearer "):
+        raw_token = raw_token[7:].strip()
+    if not raw_token and x_member_token:
+        raw_token = x_member_token.strip()
+
+    if raw_token:
+        lower_tok = raw_token.lower()
+        if "admin" in lower_tok or "painel" in lower_tok:
+            return "admin"
+        return "member"
+    if incluir_restritas:
+        return "member"
+    return "public"
+
+
+def _can_view_visibility(
+    album_vis: str, access: Literal["public", "member", "admin"]
+) -> bool:
+    """Gate único de visibilidade por nível de acesso em contextos de entidade."""
+    if access == "admin":
+        return True
+    if access == "member":
+        return album_vis in ("publica", "restrita")
+    return album_vis == "publica"
+
+
 # 1. Busca Facetada no Acervo (Modelo Federado S2: Portal Municipal só indexa visibilidade 'publica')
 @app.get("/api/v1/acervo/search")
 def search_acervo(
@@ -189,13 +240,17 @@ def search_acervo(
     ano_de: Optional[int] = None,
     ano_ate: Optional[int] = None,
     tipo: Optional[str] = None,
-    portal: Literal["municipal", "entidade"] = "municipal",
+    portal: Optional[Literal["municipal", "entidade"]] = None,
     visibilidade: Optional[Visibilidade] = None,
     incluir_restritas: bool = False,
     cursor: Optional[str] = None,
+    authorization: Optional[str] = Header(default=None),
+    x_member_token: Optional[str] = Header(default=None, alias="X-Member-Token"),
 ):
-    """Busca facetada respeitando o modelo federado (Portal Municipal restringe estritamente a 'publica')."""
+    """Busca facetada respeitando o modelo federado e filtragem por token de membro."""
     termo = (q or "").strip().lower()
+    is_municipal = (portal == "municipal") or (portal is None and entidade is None)
+    access = _resolve_access_level(authorization, x_member_token, incluir_restritas)
     items = []
 
     for foto in ACERVO_FOTOS:
@@ -203,11 +258,11 @@ def search_acervo(
         album_vis = album["visibilidade"]
         ent_info = ENTIDADES[foto["entidade"]]
 
-        if portal == "municipal" or entidade is None:
+        if is_municipal:
             if album_vis != "publica":
                 continue
         else:
-            if not incluir_restritas and album_vis != "publica":
+            if not _can_view_visibility(album_vis, access):
                 continue
             if visibilidade is not None and album_vis != visibilidade:
                 continue
@@ -221,7 +276,7 @@ def search_acervo(
         if tipo and tipo not in (album["perfil_match"], ent_info["categoria"]):
             continue
         if termo:
-            haystack = f"{foto['titulo']} {foto['entidade']} {album['titulo']}".lower()
+            haystack = f"{foto['titulo']} {foto['entidade']} {ent_info['entity_name']} {album['titulo']}".lower()
             if termo not in haystack:
                 continue
 
@@ -231,6 +286,8 @@ def search_acervo(
                 "album_id": foto["album_id"],
                 "url": foto["url"],
                 "titulo": foto["titulo"],
+                "entity": foto["entidade"],
+                "entity_name": ent_info["entity_name"],
                 "entidade": foto["entidade"],
                 "ano": foto["ano"],
                 "faces_n": foto["faces_n"],
@@ -240,7 +297,7 @@ def search_acervo(
         )
 
     return {
-        "portal": portal,
+        "portal": "municipal" if is_municipal else "entidade",
         "items": items,
         "next_cursor": None,
         "total": len(items),
@@ -250,7 +307,7 @@ def search_acervo(
 # 1b. Portais Federados por Entidade & Controle de Visibilidade (S2)
 @app.get("/api/v1/entidades")
 def list_entidades():
-    """Lista as entidades federadas com perfil padrão e contagem dinâmica de álbuns."""
+    """Lista as entidades federadas no contrato [{entity, entity_name, description, address, ...}]."""
     resultado = []
     for slug, info in ENTIDADES.items():
         ent_albuns = [a for a in ALBUNS.values() if a["entidade"] == slug]
@@ -261,41 +318,61 @@ def list_entidades():
                 "albuns_total": len(ent_albuns),
             }
         )
-    return {"entidades": resultado}
+    return resultado
 
 
 @app.get("/api/v1/entidades/{slug}/albuns")
-def list_albuns_entidade(slug: str, incluir_restritas: bool = False):
-    """Lista álbuns de um tenant federado (apenas públicos sem incluir_restritas=true)."""
+def list_albuns_entidade(
+    slug: str,
+    incluir_restritas: bool = False,
+    authorization: Optional[str] = Header(default=None),
+    x_member_token: Optional[str] = Header(default=None, alias="X-Member-Token"),
+):
+    """Lista álbuns de um tenant federado respeitando o token de membro/admin."""
     if slug not in ENTIDADES:
         raise HTTPException(status_code=404, detail=f"Entidade '{slug}' não encontrada.")
 
+    access = _resolve_access_level(authorization, x_member_token, incluir_restritas)
     albuns = [
         dict(album)
         for album in ALBUNS.values()
-        if album["entidade"] == slug
-        and (incluir_restritas or album["visibilidade"] == "publica")
+        if album["entidade"] == slug and _can_view_visibility(album["visibilidade"], access)
     ]
     return {"entidade": ENTIDADES[slug], "albuns": albuns}
 
 
 @app.patch("/api/v1/albuns/{album_id}/visibilidade")
-def update_album_visibilidade(album_id: str, payload: VisibilidadeUpdate):
-    """Alterna a visibilidade do álbum com trava LGPD obrigatória para entidades protegidas."""
+def update_album_visibilidade(
+    album_id: str,
+    payload: VisibilidadeUpdate,
+    x_confirm_publica: Optional[str] = Header(default=None, alias="X-Confirm-Publica"),
+):
+    """Alterna a visibilidade do álbum com trava LGPD (409 lgpd_confirmation_required sem X-Confirm-Publica: true)."""
     if album_id not in ALBUNS:
         raise HTTPException(status_code=404, detail=f"Álbum '{album_id}' não encontrado.")
 
     album = ALBUNS[album_id]
-    if album["lgpd_protegido"] and payload.visibilidade == "publica" and not payload.confirmar_lgpd:
-        raise HTTPException(
+    confirmed = (
+        (x_confirm_publica or "").strip().lower() in {"true", "1", "yes"}
+        or payload.confirmar_lgpd
+        or payload.confirm_publica
+    )
+    if album["lgpd_protegido"] and payload.visibilidade == "publica" and not confirmed:
+        return JSONResponse(
             status_code=409,
-            detail="Álbum protegido (LGPD/Creche): envie confirmar_lgpd=true para confirmar liberação pública.",
+            content={
+                "error": "lgpd_confirmation_required",
+                "hint": "Álbum com perfil Protegidos (Creche/LGPD). Confirme base legal e autorização do responsável reenviando com o header X-Confirm-Publica: true.",
+            },
         )
 
     visibilidade_anterior = album["visibilidade"]
     album["visibilidade"] = payload.visibilidade
+    ent_info = ENTIDADES[album["entidade"]]
     return {
         "album_id": album_id,
+        "entity": album["entidade"],
+        "entity_name": ent_info["entity_name"],
         "entidade": album["entidade"],
         "visibilidade_anterior": visibilidade_anterior,
         "visibilidade": album["visibilidade"],
