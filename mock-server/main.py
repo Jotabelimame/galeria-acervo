@@ -401,22 +401,21 @@ def list_albuns_entidade(
 def update_entidade_threshold(
     slug: str,
     payload: ThresholdCalibrationUpdate,
-    x_confirm_publica: Optional[str] = Header(default=None, alias="X-Confirm-Publica"),
 ):
-    """Calibra o threshold padrão da entidade respeitando o piso estrito de 0.75 em entidades protegidas."""
+    """Calibra o threshold padrão da entidade mantendo piso estrito 0.75 sem bypass em entidades protegidas."""
     ent_slug = _normalize_entidade(slug)
     if not ent_slug or ent_slug not in ENTIDADES:
         raise HTTPException(status_code=404, detail=f"Entidade '{slug}' não encontrada.")
 
     ent_info = ENTIDADES[ent_slug]
-    confirmed = (x_confirm_publica or "").strip().lower() in {"true", "1", "yes"}
-    if ent_info["lgpd_protegido"] and payload.threshold_default < 0.75 and not confirmed:
+    if ent_info["lgpd_protegido"] and payload.threshold_default < 0.75:
         return JSONResponse(
             status_code=409,
             content={
                 "error": "lgpd_confirmation_required",
+                "reason": "threshold_below_protected_floor",
                 "min_threshold": 0.75,
-                "hint": "Entidade protegida (Creche/EMEI) não permite threshold abaixo de 0.75 sem confirmação explícita.",
+                "hint": "Entidade protegida (Creche/EMEI) possui piso estrito de 0.75 sem bypass por header.",
             },
         )
 
@@ -495,14 +494,15 @@ async def face_search(
     effective_threshold = threshold if threshold is not None else default_threshold
 
     if ent_info and ent_info["lgpd_protegido"]:
-        if threshold is not None and threshold < ent_info["threshold_default"] and not lgpd_confirmed:
+        min_floor = max(0.75, ent_info["threshold_default"])
+        if threshold is not None and threshold < min_floor:
             return JSONResponse(
                 status_code=409,
                 content={
                     "error": "lgpd_confirmation_required",
                     "reason": "threshold_below_protected_floor",
-                    "min_threshold": ent_info["threshold_default"],
-                    "hint": "Entidade protegida (Creche/EMEI) exige threshold mínimo estrito de 0.75 pela trava LGPD.",
+                    "min_threshold": min_floor,
+                    "hint": "Entidade protegida (Creche/EMEI) exige threshold mínimo estrito de 0.75 sem bypass por header.",
                 },
             )
         has_public_album = any(
@@ -595,12 +595,14 @@ def get_ledger(foto_id: str):
     }
 
 def _build_live_frames(slug: str) -> list[dict]:
-    """Constrói os frames mock no contrato canônico do CineDirector para HTTP e WebSocket."""
+    """Constrói os frames mock (foto e vídeo S4b) no contrato canônico do CineDirector."""
     now_iso = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     return [
         {
             "event_id": slug,
             "foto_id": "fot_live_001",
+            "tipo": "photo",
+            "media_type": "photo",
             "url_display": "https://images.unsplash.com/photo-1511795409834-ef04bbd61622?w=1600",
             "created_at": now_iso,
             "is_breaking": True,
@@ -613,6 +615,8 @@ def _build_live_frames(slug: str) -> list[dict]:
         {
             "event_id": slug,
             "foto_id": "fot_live_002",
+            "tipo": "photo",
+            "media_type": "photo",
             "url_display": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=1600",
             "created_at": now_iso,
             "is_breaking": False,
@@ -625,6 +629,8 @@ def _build_live_frames(slug: str) -> list[dict]:
         {
             "event_id": slug,
             "foto_id": "fot_live_003",
+            "tipo": "photo",
+            "media_type": "photo",
             "url_display": "https://images.unsplash.com/photo-1519741497674-611481863552?w=1600",
             "created_at": now_iso,
             "is_breaking": True,
@@ -633,6 +639,21 @@ def _build_live_frames(slug: str) -> list[dict]:
             "suggested_motion": "kenburns_focus_face",
             "orientation": "portrait",
             "dwell_time_ms": 5500,
+        },
+        {
+            "event_id": slug,
+            "foto_id": "vid_live_004",
+            "tipo": "video",
+            "media_type": "video",
+            "url_display": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
+            "poster_url": "https://images.unsplash.com/photo-1511795409834-ef04bbd61622?w=1200",
+            "created_at": now_iso,
+            "is_breaking": True,
+            "faces_n": 4,
+            "primary_face_bbox": {"x": 0.46, "y": 0.30, "w": 0.22, "h": 0.26},
+            "suggested_motion": "video_play",
+            "orientation": "landscape",
+            "dwell_time_ms": 8000,
         },
     ]
 
