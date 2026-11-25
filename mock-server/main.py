@@ -645,7 +645,7 @@ def _build_live_frames(slug: str) -> list[dict]:
             "foto_id": "vid_live_004",
             "tipo": "video",
             "media_type": "video",
-            "url_display": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
+            "url_display": "https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/720/Big_Buck_Bunny_720_10s_1MB.mp4",
             "poster_url": "https://images.unsplash.com/photo-1511795409834-ef04bbd61622?w=1200",
             "created_at": now_iso,
             "is_breaking": True,
@@ -653,7 +653,8 @@ def _build_live_frames(slug: str) -> list[dict]:
             "primary_face_bbox": {"x": 0.46, "y": 0.30, "w": 0.22, "h": 0.26},
             "suggested_motion": "video_play",
             "orientation": "landscape",
-            "dwell_time_ms": 8000,
+            "duration_ms": 10000,
+            "dwell_time_ms": 10000,
         },
     ]
 
