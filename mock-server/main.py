@@ -4,6 +4,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from typing import Literal, Optional
 import asyncio
+import unicodedata
 from datetime import datetime, timezone
 
 app = FastAPI(title="OCI Backend Mock - Acervo & Galeria")
@@ -27,6 +28,38 @@ class VisibilidadeUpdate(BaseModel):
     confirm_publica: bool = False
 
 
+class ThresholdCalibrationUpdate(BaseModel):
+    """Payload para calibrar o threshold padrão de match facial por entidade."""
+
+    threshold_default: float
+    perfil_match_default: Optional[str] = None
+
+
+ENTITY_ALIASES = {
+    "emei": "creche",
+    "creches": "creche",
+    "padroeiro": "paroquia",
+    "padroeira": "paroquia",
+    "paroquial": "paroquia",
+    "camara": "prefeitura",
+    "municipio": "prefeitura",
+}
+
+
+def _normalize_entidade(slug: Optional[str]) -> Optional[str]:
+    """Normaliza slug de entidade aplicando aliases conhecidos (ex: emei -> creche)."""
+    if not slug:
+        return None
+    clean = slug.strip().lower()
+    return ENTITY_ALIASES.get(clean, clean) if clean else None
+
+
+def _fold_text(text: str) -> str:
+    """Remove acentos e normaliza em minúsculas para FTS tolerante a grafia."""
+    normalized = unicodedata.normalize("NFKD", text or "")
+    return "".join(ch for ch in normalized if not unicodedata.combining(ch)).lower()
+
+
 ENTIDADES = {
     "prefeitura": {
         "entity": "prefeitura",
@@ -39,6 +72,7 @@ ENTIDADES = {
         "perfil_match_default": "geral_noturno",
         "threshold_default": 0.62,
         "lgpd_protegido": False,
+        "aliases": ["camara", "municipio"],
     },
     "paroquia": {
         "entity": "paroquia",
@@ -51,6 +85,7 @@ ENTIDADES = {
         "perfil_match_default": "geral_noturno",
         "threshold_default": 0.62,
         "lgpd_protegido": False,
+        "aliases": ["padroeiro", "padroeira", "paroquial"],
     },
     "rotary": {
         "entity": "rotary",
@@ -63,6 +98,7 @@ ENTIDADES = {
         "perfil_match_default": "retratos_formaturas",
         "threshold_default": 0.70,
         "lgpd_protegido": False,
+        "aliases": [],
     },
     "creche": {
         "entity": "creche",
@@ -75,6 +111,7 @@ ENTIDADES = {
         "perfil_match_default": "protegidos",
         "threshold_default": 0.75,
         "lgpd_protegido": True,
+        "aliases": ["emei", "creches"],
     },
 }
 
@@ -88,6 +125,7 @@ ALBUNS = {
         "perfil_match": "retratos_formaturas",
         "threshold": 0.70,
         "lgpd_protegido": False,
+        "tags": ["rotary", "solene", "posse", "jantar", "clube"],
     },
     "alb_padroeiro_2026": {
         "album_id": "alb_padroeiro_2026",
@@ -98,6 +136,7 @@ ALBUNS = {
         "perfil_match": "geral_noturno",
         "threshold": 0.62,
         "lgpd_protegido": False,
+        "tags": ["junina", "festa junina", "quermesse", "padroeiro", "padroeira", "paroquia", "paroquial", "procissao", "novena"],
     },
     "alb_prefeitura_posse_2026": {
         "album_id": "alb_prefeitura_posse_2026",
@@ -108,6 +147,7 @@ ALBUNS = {
         "perfil_match": "geral_noturno",
         "threshold": 0.62,
         "lgpd_protegido": False,
+        "tags": ["prefeitura", "camara", "honra ao merito", "posse", "vereadores", "sessao"],
     },
     "alb_rotary_diretoria_2026": {
         "album_id": "alb_rotary_diretoria_2026",
@@ -118,6 +158,7 @@ ALBUNS = {
         "perfil_match": "retratos_formaturas",
         "threshold": 0.70,
         "lgpd_protegido": False,
+        "tags": ["rotary", "diretoria", "assembleia", "interna"],
     },
     "alb_creche_formatura_2026": {
         "album_id": "alb_creche_formatura_2026",
@@ -128,6 +169,7 @@ ALBUNS = {
         "perfil_match": "protegidos",
         "threshold": 0.75,
         "lgpd_protegido": True,
+        "tags": ["creche", "emei", "pequeno principe", "formatura", "infantil", "criancas"],
     },
     "alb_prefeitura_rascunho_2026": {
         "album_id": "alb_prefeitura_rascunho_2026",
@@ -138,6 +180,7 @@ ALBUNS = {
         "perfil_match": "geral_noturno",
         "threshold": 0.62,
         "lgpd_protegido": False,
+        "tags": ["vistoria", "obra", "interno", "arquivo"],
     },
 }
 
@@ -150,6 +193,7 @@ ACERVO_FOTOS = [
         "entidade": "rotary",
         "ano": 2024,
         "faces_n": 4,
+        "mock_similarity": 0.84,
     },
     {
         "foto_id": "fot_mock_002",
@@ -159,6 +203,7 @@ ACERVO_FOTOS = [
         "entidade": "paroquia",
         "ano": 2026,
         "faces_n": 8,
+        "mock_similarity": 0.76,
     },
     {
         "foto_id": "fot_mock_003",
@@ -168,6 +213,7 @@ ACERVO_FOTOS = [
         "entidade": "prefeitura",
         "ano": 2026,
         "faces_n": 5,
+        "mock_similarity": 0.64,
     },
     {
         "foto_id": "fot_mock_004",
@@ -177,6 +223,7 @@ ACERVO_FOTOS = [
         "entidade": "rotary",
         "ano": 2026,
         "faces_n": 6,
+        "mock_similarity": 0.73,
     },
     {
         "foto_id": "fot_mock_005",
@@ -186,6 +233,7 @@ ACERVO_FOTOS = [
         "entidade": "creche",
         "ano": 2026,
         "faces_n": 3,
+        "mock_similarity": 0.81,
     },
     {
         "foto_id": "fot_mock_006",
@@ -195,6 +243,7 @@ ACERVO_FOTOS = [
         "entidade": "prefeitura",
         "ano": 2026,
         "faces_n": 2,
+        "mock_similarity": 0.69,
     },
 ]
 
@@ -247,9 +296,10 @@ def search_acervo(
     authorization: Optional[str] = Header(default=None),
     x_member_token: Optional[str] = Header(default=None, alias="X-Member-Token"),
 ):
-    """Busca facetada respeitando o modelo federado e filtragem por token de membro."""
-    termo = (q or "").strip().lower()
-    is_municipal = (portal == "municipal") or (portal is None and entidade is None)
+    """Busca facetada respeitando o modelo federado, aliases de entidade e FTS por tags."""
+    termo = _fold_text((q or "").strip())
+    ent_slug = _normalize_entidade(entidade)
+    is_municipal = (portal == "municipal") or (portal is None and ent_slug is None)
     access = _resolve_access_level(authorization, x_member_token, incluir_restritas)
     items = []
 
@@ -267,7 +317,7 @@ def search_acervo(
             if visibilidade is not None and album_vis != visibilidade:
                 continue
 
-        if entidade and foto["entidade"] != entidade:
+        if ent_slug and foto["entidade"] != ent_slug:
             continue
         if ano_de is not None and foto["ano"] < ano_de:
             continue
@@ -276,7 +326,11 @@ def search_acervo(
         if tipo and tipo not in (album["perfil_match"], ent_info["categoria"]):
             continue
         if termo:
-            haystack = f"{foto['titulo']} {foto['entidade']} {ent_info['entity_name']} {album['titulo']}".lower()
+            tags_str = " ".join(album.get("tags", []))
+            aliases_str = " ".join(ent_info.get("aliases", []))
+            haystack = _fold_text(
+                f"{foto['titulo']} {foto['entidade']} {ent_info['entity_name']} {album['titulo']} {tags_str} {aliases_str}"
+            )
             if termo not in haystack:
                 continue
 
@@ -293,6 +347,7 @@ def search_acervo(
                 "faces_n": foto["faces_n"],
                 "visibilidade": album_vis,
                 "perfil_match": album["perfil_match"],
+                "tags": album.get("tags", []),
             }
         )
 
@@ -328,17 +383,47 @@ def list_albuns_entidade(
     authorization: Optional[str] = Header(default=None),
     x_member_token: Optional[str] = Header(default=None, alias="X-Member-Token"),
 ):
-    """Lista álbuns de um tenant federado respeitando o token de membro/admin."""
-    if slug not in ENTIDADES:
+    """Lista álbuns de um tenant federado (com suporte a aliases como emei -> creche)."""
+    ent_slug = _normalize_entidade(slug)
+    if not ent_slug or ent_slug not in ENTIDADES:
         raise HTTPException(status_code=404, detail=f"Entidade '{slug}' não encontrada.")
 
     access = _resolve_access_level(authorization, x_member_token, incluir_restritas)
     albuns = [
         dict(album)
         for album in ALBUNS.values()
-        if album["entidade"] == slug and _can_view_visibility(album["visibilidade"], access)
+        if album["entidade"] == ent_slug and _can_view_visibility(album["visibilidade"], access)
     ]
-    return {"entidade": ENTIDADES[slug], "albuns": albuns}
+    return {"entidade": ENTIDADES[ent_slug], "albuns": albuns}
+
+
+@app.patch("/api/v1/entidades/{slug}/threshold")
+def update_entidade_threshold(
+    slug: str,
+    payload: ThresholdCalibrationUpdate,
+    x_confirm_publica: Optional[str] = Header(default=None, alias="X-Confirm-Publica"),
+):
+    """Calibra o threshold padrão da entidade respeitando o piso estrito de 0.75 em entidades protegidas."""
+    ent_slug = _normalize_entidade(slug)
+    if not ent_slug or ent_slug not in ENTIDADES:
+        raise HTTPException(status_code=404, detail=f"Entidade '{slug}' não encontrada.")
+
+    ent_info = ENTIDADES[ent_slug]
+    confirmed = (x_confirm_publica or "").strip().lower() in {"true", "1", "yes"}
+    if ent_info["lgpd_protegido"] and payload.threshold_default < 0.75 and not confirmed:
+        return JSONResponse(
+            status_code=409,
+            content={
+                "error": "lgpd_confirmation_required",
+                "min_threshold": 0.75,
+                "hint": "Entidade protegida (Creche/EMEI) não permite threshold abaixo de 0.75 sem confirmação explícita.",
+            },
+        )
+
+    ent_info["threshold_default"] = payload.threshold_default
+    if payload.perfil_match_default:
+        ent_info["perfil_match_default"] = payload.perfil_match_default
+    return dict(ent_info)
 
 
 @app.patch("/api/v1/albuns/{album_id}/visibilidade")
@@ -380,15 +465,110 @@ def update_album_visibilidade(
         "updated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
     }
 
-# 2. Busca Facial
+# 2. Busca Facial (S3: threshold por entidade, trava LGPD 409 e gate de visibilidade S2)
 @app.post("/api/v1/acervo/face")
-async def face_search(file: UploadFile = File(...)):
+async def face_search(
+    file: Optional[UploadFile] = File(default=None),
+    entidade: Optional[str] = Query(default=None),
+    threshold: Optional[float] = Query(default=None, ge=0.0, le=1.0),
+    portal: Optional[Literal["municipal", "entidade"]] = Query(default=None),
+    incluir_restritas: bool = Query(default=False),
+    authorization: Optional[str] = Header(default=None),
+    x_member_token: Optional[str] = Header(default=None, alias="X-Member-Token"),
+    x_confirm_publica: Optional[str] = Header(default=None, alias="X-Confirm-Publica"),
+    x_confirm_lgpd: Optional[str] = Header(default=None, alias="X-Confirm-Lgpd"),
+):
+    """Busca facial no acervo frio aplicando perfil/threshold por entidade, gate S2 e trava LGPD 409."""
+    ent_slug = _normalize_entidade(entidade)
+    if ent_slug is not None and ent_slug not in ENTIDADES:
+        raise HTTPException(status_code=404, detail=f"Entidade '{entidade}' não encontrada.")
+
+    ent_info = ENTIDADES[ent_slug] if ent_slug else None
+    access = _resolve_access_level(authorization, x_member_token, incluir_restritas)
+    lgpd_confirmed = any(
+        (h or "").strip().lower() in {"true", "1", "yes"}
+        for h in (x_confirm_publica, x_confirm_lgpd)
+    )
+
+    perfil_match = ent_info["perfil_match_default"] if ent_info else "geral_noturno"
+    default_threshold = ent_info["threshold_default"] if ent_info else 0.62
+    effective_threshold = threshold if threshold is not None else default_threshold
+
+    if ent_info and ent_info["lgpd_protegido"]:
+        if threshold is not None and threshold < ent_info["threshold_default"] and not lgpd_confirmed:
+            return JSONResponse(
+                status_code=409,
+                content={
+                    "error": "lgpd_confirmation_required",
+                    "reason": "threshold_below_protected_floor",
+                    "min_threshold": ent_info["threshold_default"],
+                    "hint": "Entidade protegida (Creche/EMEI) exige threshold mínimo estrito de 0.75 pela trava LGPD.",
+                },
+            )
+        has_public_album = any(
+            a["visibilidade"] == "publica"
+            for a in ALBUNS.values()
+            if a["entidade"] == ent_slug
+        )
+        if access == "public" and not has_public_album and not lgpd_confirmed:
+            return JSONResponse(
+                status_code=409,
+                content={
+                    "error": "lgpd_confirmation_required",
+                    "reason": "member_token_required",
+                    "min_threshold": ent_info["threshold_default"],
+                    "hint": "Busca facial em entidade protegida (Creche/EMEI) exige credencial de membro/responsável (Authorization / X-Member-Token).",
+                },
+            )
+
+    is_municipal = (portal == "municipal") or (portal is None and ent_slug is None)
+    matches = []
+
+    for foto in ACERVO_FOTOS:
+        album = ALBUNS[foto["album_id"]]
+        album_vis = album["visibilidade"]
+        foto_ent = ENTIDADES[foto["entidade"]]
+
+        if is_municipal:
+            if album_vis != "publica":
+                continue
+        else:
+            if not _can_view_visibility(album_vis, access):
+                continue
+
+        if ent_slug and foto["entidade"] != ent_slug:
+            continue
+
+        sim = foto["mock_similarity"]
+        if sim < effective_threshold:
+            continue
+
+        matches.append(
+            {
+                "foto_id": foto["foto_id"],
+                "similarity": sim,
+                "album_id": foto["album_id"],
+                "url": foto["url"],
+                "titulo": foto["titulo"],
+                "entity": foto["entidade"],
+                "entity_name": foto_ent["entity_name"],
+                "entidade": foto["entidade"],
+                "ano": foto["ano"],
+                "faces_n": foto["faces_n"],
+                "visibilidade": album_vis,
+                "perfil_match": album["perfil_match"],
+            }
+        )
+
+    matches.sort(key=lambda m: m["similarity"], reverse=True)
     return {
-        "matches": [
-            {"foto_id": "fot_mock_001", "similarity": 0.84},
-            {"foto_id": "fot_mock_002", "similarity": 0.76}
-        ],
-        "expires_in_seconds": 3600
+        "entity": ent_slug,
+        "entity_name": ent_info["entity_name"] if ent_info else None,
+        "perfil_match": perfil_match,
+        "threshold_applied": effective_threshold,
+        "matches": matches,
+        "total": len(matches),
+        "expires_in_seconds": 3600,
     }
 
 # 3. Download Forense com URL Assinada
